@@ -1,4 +1,4 @@
-# medicata
+# Medicata
 
 A new Flutter project.
 
