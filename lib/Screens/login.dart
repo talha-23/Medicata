@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import '../Colors/theme.dart';
-import 'mainScreen.dart';
+import 'Home.dart';
 import '../services/auth_service.dart';
-import 'splash_screen.dart';
+import 'Signup.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
+import '../services/session_manager.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -48,10 +48,7 @@ class _LoginScreenState extends State<LoginScreen> {
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Logging in...'),
-          backgroundColor: Colors.blue,
-        ),
+        SnackBar(content: Text('Logging in...'), backgroundColor: Colors.blue),
       );
 
       try {
@@ -75,14 +72,13 @@ class _LoginScreenState extends State<LoginScreen> {
               MaterialPageRoute(builder: (context) => MainScreen()),
             );
           });
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Login failed. Please check credentials.'),
-              backgroundColor: Colors.red,
-            ),
-          );
         }
+      } on FirebaseAuthException catch (e) {
+        String errorMessage = e.message ?? 'Login failed';
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMessage), backgroundColor: Colors.red),
+        );
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -98,154 +94,218 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  void _showForgotPasswordDialog() {
+    final emailController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(15),
+            ),
+            title: Row(
+              children: [
+                Icon(Icons.lock_reset, color: AppColors.accentLight),
+                SizedBox(width: 10),
+                Text('Forgot Password'),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('Enter your email to reset password:'),
+                SizedBox(height: 10),
+                TextFormField(
+                  controller: emailController,
+                  decoration: InputDecoration(
+                    labelText: 'Email',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    hintText: 'your@email.com',
+                    prefixIcon: Icon(Icons.email),
+                  ),
+                  keyboardType: TextInputType.emailAddress,
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text('Cancel'),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.accentLight,
+                ),
+                onPressed: () async {
+                  String email = emailController.text.trim();
+
+                  if (email.isEmpty || !email.contains('@')) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Please enter valid email'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                    return;
+                  }
+
+                  Navigator.pop(context);
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Checking email...'),
+                      backgroundColor: Colors.blue,
+                    ),
+                  );
+
+                  try {
+                    bool emailExists = await _authService.checkEmailExists(
+                      email,
+                    );
+
+                    if (emailExists) {
+                      // Get username and send reset email
+                      String username = await _authService.resetPassword(email);
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Password reset email sent to: $email\nUsername: $username',
+                          ),
+                          backgroundColor: Colors.green,
+                          duration: Duration(seconds: 4),
+                        ),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Email not registered.'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Error: ${e.toString()}'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                },
+                child: Text('Send Reset Link'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
   void _togglePasswordVisibility() {
     setState(() {
       _obscurePassword = !_obscurePassword;
     });
   }
 
-  void _continueWithoutAccount() {
+  void _continueWithoutAccount() async {
+    // Start a guest session in SQLite
+    final sessionManager = SessionManager();
+    await sessionManager.startGuestSession(name: 'Guest User');
+
+    // Navigate to home
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (context) => MainScreen()),
     );
   }
 
+  // ========== GOOGLE SIGN-IN ==========
   void _handleGoogleLogin() async {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Signing in with Google...'),
-        backgroundColor: AppColors.googleRed,
-      ),
-    );
+    setState(() {
+      _isLoading = true;
+    });
 
-    // Implement Google sign-in logic here
-    await Future.delayed(Duration(seconds: 2));
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Google login feature coming soon!'),
-        backgroundColor: Colors.orange,
-      ),
-    );
-  }
+    try {
+      User? user = await _authService.signInWithGoogle();
 
-  void _handleFacebookLogin() async {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Signing in with Facebook...'),
-        backgroundColor: AppColors.facebookBlue,
-      ),
-    );
+      if (user != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('✅ Google login successful!'),
+            backgroundColor: Colors.green,
+          ),
+        );
 
-    // Implement Facebook sign-in logic here
-    await Future.delayed(Duration(seconds: 2));
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Facebook login feature coming soon!'),
-        backgroundColor: Colors.orange,
-      ),
-    );
-  }
-
-  void _forgotPassword() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Forgot Password'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Enter your email to reset password:'),
-            SizedBox(height: 10),
-            TextFormField(
-              decoration: InputDecoration(
-                labelText: 'Email',
-                border: OutlineInputBorder(),
-              ),
-            ),
-          ],
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => MainScreen()),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Google login failed: ${e.toString()}'),
+          backgroundColor: Colors.red,
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Password reset email sent!')),
-              );
-              Navigator.pop(context);
-            },
-            child: Text('Send Reset Link'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  @override
-  void dispose() {
-    _usernameController.dispose();
-    _passwordController.dispose();
-    super.dispose();
+      );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.primaryLight,
-      body: Center(
-        child: SingleChildScrollView(
-          child: Form(
-            key: _formKey,
+      body: SingleChildScrollView(
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20.0),
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
               children: [
-                SizedBox(height: 20),
+                SizedBox(height: 50),
+
                 Text(
-                  "MEDICATA",
+                  'MEDICATA',
                   style: TextStyle(
+                    fontSize: 40,
                     fontWeight: FontWeight.bold,
-                    fontSize: 32,
-                    fontFamily: "BubblegumSans",
-                    color: AppColors.accentLight,
+                    color: AppColors.textSecondaryDark,
                   ),
                 ),
+                SizedBox(height: 5),
                 Text(
-                  "WELCOME BACK",
+                  'Welcome Back',
                   style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: "BubblegumSans",
-                    color: AppColors.textSecondaryLight,
+                    fontSize: 18,
+                    color: AppColors.textPrimaryLight,
                   ),
                 ),
-                Card(
-                  margin: EdgeInsets.symmetric(horizontal: 20, vertical: 5),
-                  color: AppColors.cardLight,
-                  shape: RoundedRectangleBorder(
+                SizedBox(height: 30),
+                Container(
+                  padding: EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: AppColors.cardLight,
                     borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 10,
+                        offset: Offset(0, 5),
+                      ),
+                    ],
                   ),
-                  child: Padding(
-                    padding: EdgeInsets.all(30.0),
+                  child: Form(
+                    key: _formKey,
                     child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          'LOGIN',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            fontFamily: "BubblegumSans",
-                            color: AppColors.textSecondaryLight,
-                          ),
-                        ),
-                        SizedBox(height: 20),
                         TextFormField(
                           controller: _usernameController,
                           decoration: InputDecoration(
@@ -257,17 +317,13 @@ class _LoginScreenState extends State<LoginScreen> {
                               Icons.person,
                               color: AppColors.iconLight,
                             ),
-                            enabledBorder: OutlineInputBorder(
-                              borderSide: BorderSide(
-                                color: AppColors.textSecondaryLight,
-                              ),
-                              borderRadius: BorderRadius.circular(10),
+                            filled: true,
+                            fillColor: AppColors.textSecondaryLight.withOpacity(
+                              0.1,
                             ),
-                            focusedBorder: OutlineInputBorder(
-                              borderSide: BorderSide(
-                                color: AppColors.textSecondaryLight,
-                              ),
+                            border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(10),
+                              borderSide: BorderSide.none,
                             ),
                             errorBorder: OutlineInputBorder(
                               borderSide: BorderSide(color: Colors.red),
@@ -295,17 +351,13 @@ class _LoginScreenState extends State<LoginScreen> {
                               Icons.lock,
                               color: AppColors.iconLight,
                             ),
-                            enabledBorder: OutlineInputBorder(
-                              borderSide: BorderSide(
-                                color: AppColors.textSecondaryLight,
-                              ),
-                              borderRadius: BorderRadius.circular(10),
+                            filled: true,
+                            fillColor: AppColors.textSecondaryLight.withOpacity(
+                              0.1,
                             ),
-                            focusedBorder: OutlineInputBorder(
-                              borderSide: BorderSide(
-                                color: AppColors.textSecondaryLight,
-                              ),
+                            border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(10),
+                              borderSide: BorderSide.none,
                             ),
                             errorBorder: OutlineInputBorder(
                               borderSide: BorderSide(color: Colors.red),
@@ -334,7 +386,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         Align(
                           alignment: Alignment.centerRight,
                           child: TextButton(
-                            onPressed: _forgotPassword,
+                            onPressed: _showForgotPasswordDialog,
                             child: Text(
                               'Forgot Password?',
                               style: TextStyle(
@@ -464,29 +516,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         padding: EdgeInsets.all(15),
                       ),
                     ),
-                    SizedBox(width: 20),
-                    IconButton(
-                      onPressed: _isLoading ? null : _handleFacebookLogin,
-                      icon: Image.asset(
-                        'assets/facebook.png',
-                        height: 30,
-                        width: 30,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Icon(
-                            Icons.facebook,
-                            size: 30,
-                            color: Colors.blue,
-                          );
-                        },
-                      ),
-                      style: IconButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        padding: EdgeInsets.all(15),
-                      ),
-                    ),
                   ],
                 ),
-                SizedBox(height: 20),
+                SizedBox(height: 30),
                 ElevatedButton(
                   onPressed: _isLoading ? null : _continueWithoutAccount,
                   style: ElevatedButton.styleFrom(
@@ -504,7 +536,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                   ),
                 ),
-                SizedBox(height: 30),
               ],
             ),
           ),

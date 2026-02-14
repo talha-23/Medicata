@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
-import 'Screens/splash_screen.dart';
+import 'Screens/Signup.dart';
+import 'Screens/Home.dart';
 import 'Colors/theme.dart';
 import 'Databases/firebase_config.dart';
+import 'services/session_manager.dart';
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -68,14 +71,38 @@ class _SplashScreenState extends State<SplashScreen>
       }
     });
 
+    // AUTO-LOGIN CHECK: Navigate based on authentication status
     Future.delayed(Duration(seconds: 4), () {
       if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => SecondScreen()),
-        );
+        _checkSessionAndNavigate();
       }
     });
+  }
+
+  // ========== AUTO-LOGIN LOGIC ==========
+  void _checkSessionAndNavigate() async {
+    final sessionManager = SessionManager();
+    final session = await sessionManager.getCurrentSession();
+
+    if (session['type'] == SessionManager.SESSION_TYPE_REGISTERED) {
+      // Registered user logged in
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => MainScreen()),
+      );
+    } else if (session['type'] == SessionManager.SESSION_TYPE_GUEST) {
+      // Guest user with active session
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => MainScreen()),
+      );
+    } else {
+      // No active session - go to signup/login
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => SecondScreen()),
+      );
+    }
   }
 
   @override
@@ -97,7 +124,7 @@ class _SplashScreenState extends State<SplashScreen>
               child: AnimatedBuilder(
                 animation: _controller,
                 builder: (context, child) {
-                  return Container(
+                  return SizedBox(
                     width: _sizeAnimation.value,
                     height: _sizeAnimation.value,
                     child: Image.asset(
