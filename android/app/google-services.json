@@ -12,7 +12,12 @@
           "package_name": "com.example.medicata"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "605430640603-htnacmb3bfic852hseucd91ok0sbi3ml.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBHUFCzjj6jzbEcbBYcNJj4ziBIiDSJCbE"
@@ -20,7 +25,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "605430640603-htnacmb3bfic852hseucd91ok0sbi3ml.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "605430640603-j8p741c87fsjd3kcf4f3af417emsp544.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.medicata"
+              }
+            }
+          ]
         }
       }
     }

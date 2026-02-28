@@ -407,9 +407,11 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     final today = DateTime.now().weekday;
-    setState(() {
+    if(mounted){
+      setState(() {
       _customQuote = _defaultQuotes[today] ?? _defaultQuotes[1]!;
     });
+    }
   }
 
   Future<void> _customizeQuote() async {
