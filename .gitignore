@@ -1,22 +1,22 @@
-# Miscellaneous
+# miscellaneous
 *.class
 *.log
 *.pyc
 *.swp
-.DS_Store
+.ds_store
 .history
 .svn/
 .swiftpm/
 migrate_working_dir/
 
-# IDEs
+# ides
 *.iml
 *.ipr
 *.iws
 .idea/
 .vscode/
 
-# Flutter/Dart
+# flutter / dart
 **/doc/api/
 .dart_tool/
 .packages
@@ -25,32 +25,35 @@ migrate_working_dir/
 .pub-cache/
 .pub/
 
-# Flutter build folders
+# flutter build folders
 /build/
 /android/build/
 /android/app/build/
-/ios/Flutter/Flutter.framework/
-/ios/Flutter/Flutter.podspec
+/ios/flutter/flutter.framework/
+/ios/flutter/flutter.podspec
 
-# Coverage
+# coverage
 /coverage/
 
-# Android Studio / IntelliJ generated files
+# android studio / intellij generated files
 *.hprof
 *.log
 
-# iOS related
-Pods/
-DerivedData/
+# ios related
+pods/
+deriveddata/
 *.xcworkspace
 *.xcuserstate
 *.xcodeproj/project.xcworkspace/
 *.xcodeproj/xcuserdata/
 
-# Generated plugin files
+# generated plugin files
 .generated/
 .flutter-plugins-dependencies
 
-# Other
+# other
 app.*.symbols
 app.*.map.json
+
+# do not upload environment file
+.env
