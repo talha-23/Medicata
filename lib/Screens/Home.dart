@@ -1,3 +1,4 @@
+// Home.dart
 import 'package:flutter/material.dart';
 import '../Colors/theme.dart';
 import '../services/auth_service.dart';
@@ -13,9 +14,10 @@ import 'ChatBotScreen.dart';
 import 'ProfileScreen.dart';
 import 'EditMedicationScreen.dart';
 import '../widgets/LoadingIndicator.dart';
+import 'HelpSupportScreen.dart';
 import 'package:intl/intl.dart';
+import 'SettingScreen.dart';
 import 'dart:io';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -29,6 +31,7 @@ class _MainScreenState extends State<MainScreen> {
   final AuthService _authService = AuthService();
   final SessionManager _sessionManager = SessionManager();
   bool _isGuest = false;
+  bool _isLoading = true; // Add loading state
 
   @override
   void initState() {
@@ -37,10 +40,16 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   Future<void> _checkUserType() async {
+    setState(() {
+      _isLoading = true;
+    });
+
     final isGuest = await _sessionManager.isGuestMode();
-    print('User is guest: $isGuest');
+    print('MainScreen - User is guest: $isGuest');
+
     setState(() {
       _isGuest = isGuest;
+      _isLoading = false;
     });
   }
 
@@ -77,7 +86,7 @@ class _MainScreenState extends State<MainScreen> {
     const HistoryScreen(),
     const AddMedicationScreen(),
     const ChatBotScreen(),
-    ProfileScreen(isGuest: _isGuest),
+    ProfileScreen(isGuest: _isGuest), // This will update when _isGuest changes
   ];
 
   void _onItemTapped(int index) {
@@ -103,6 +112,14 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(color: AppColors.accentLight),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -136,98 +153,211 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
+  // Home.dart (only the drawer section - replace the _buildDrawer method)
+
   Widget _buildDrawer() {
     return Drawer(
       child: Container(
         color: AppColors.primaryLight,
-        child: ListView(
-          padding: EdgeInsets.zero,
+        child: Column(
           children: [
-            DrawerHeader(
+            // User Info Header - Always at top
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(16, 48, 16, 24),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [AppColors.accentLight, AppColors.secondaryLight],
                 ),
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(30),
+                  bottomRight: Radius.circular(30),
+                ),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  CircleAvatar(
-                    radius: 30,
-                    backgroundColor: Colors.white,
-                    child: Icon(
-                      _isGuest ? Icons.person_outline : Icons.person,
-                      size: 35,
-                      color: AppColors.accentLight,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    _isGuest ? 'Guest User' : 'Registered User',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(
-                    _isGuest ? 'Limited Features' : 'Full Access',
-                    style: const TextStyle(color: Colors.white70, fontSize: 14),
+                  // Profile Picture
+                  Row(
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 3),
+                        ),
+                        child: CircleAvatar(
+                          radius: 35,
+                          backgroundColor: Colors.white,
+                          backgroundImage: !_isGuest
+                              ? (NetworkImage(
+                                      _authService.currentUser?.photoURL ?? '',
+                                    )
+                                    as ImageProvider<
+                                      Object
+                                    >?) // Cast to nullable
+                              : null,
+                          child:
+                              !_isGuest &&
+                                  _authService.currentUser?.photoURL != null
+                              ? null
+                              : Icon(
+                                  _isGuest
+                                      ? Icons.person_outline
+                                      : Icons.person,
+                                  size: 35,
+                                  color: AppColors.accentLight,
+                                ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      // User Info
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _isGuest
+                                  ? 'Guest User'
+                                  : (_authService.currentUser?.displayName ??
+                                        'User'),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              _isGuest ? 'Limited Features' : 'Full Access',
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 14,
+                              ),
+                            ),
+                            if (!_isGuest &&
+                                _authService.currentUser?.email != null)
+                              Text(
+                                _authService.currentUser!.email!,
+                                style: const TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 12,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
-            _buildDrawerItem(Icons.home, 'Home', 0),
-            _buildDrawerItem(Icons.history, 'History', 1),
-            _buildDrawerItem(Icons.add_circle, 'Add Medication', 2),
-            _buildDrawerItem(Icons.chat, 'AI Chat Bot', 3),
-            _buildDrawerItem(Icons.person, 'Profile', 4),
-            const Divider(),
-            if (_isGuest)
-              ListTile(
-                leading: Icon(Icons.star, color: Colors.amber),
-                title: const Text(
-                  'Upgrade Account',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                subtitle: const Text('Get full features'),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const SecondScreen(),
+
+            // Menu Items - Only Home
+            Expanded(
+              child: ListView(
+                padding: EdgeInsets.zero,
+                children: [
+                  // Home Menu Item
+                  _buildDrawerItem(
+                    Icons.home_outlined,
+                    'Home',
+                    onTap: () {
+                      Navigator.pop(context);
+                      _onItemTapped(0);
+                    },
+                  ),
+
+                  const Divider(
+                    height: 32,
+                    thickness: 1,
+                    indent: 16,
+                    endIndent: 16,
+                  ),
+
+                  // Settings Section Header
+                  const Padding(
+                    padding: EdgeInsets.only(left: 16, top: 8, bottom: 8),
+                    child: Text(
+                      'Settings & Support',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey,
+                      ),
                     ),
-                  );
-                },
+                  ),
+
+                  // Settings
+                  _buildDrawerItem(
+                    Icons.settings_outlined,
+                    'Settings',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const SettingsScreen(),
+                        ),
+                      );
+                    },
+                  ),
+
+                  // Help & Support
+                  _buildDrawerItem(
+                    Icons.help_outline,
+                    'Help & Support',
+                    onTap: () {
+                      Navigator.pop(context); // Close drawer
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const HelpSupportScreen(),
+                        ),
+                      );
+                    },
+                  ),
+
+                  // About
+                  _buildDrawerItem(
+                    Icons.info_outline,
+                    'About',
+                    onTap: _showAboutDialog,
+                  ),
+                ],
               ),
-            _buildDrawerItem(
-              Icons.settings,
-              'Settings',
-              null,
-              onTap: () => _showComingSoon('Settings'),
             ),
-            _buildDrawerItem(
-              Icons.help,
-              'Help & Support',
-              null,
-              onTap: () => _showComingSoon('Help & Support'),
-            ),
-            _buildDrawerItem(
-              Icons.info,
-              'About',
-              null,
-              onTap: () => _showAboutDialog(),
-            ),
-            const Divider(),
-            ListTile(
-              leading: Icon(Icons.logout, color: Colors.red),
-              title: const Text('Logout', style: TextStyle(color: Colors.red)),
-              onTap: () {
-                Navigator.pop(context);
-                _handleLogout();
-              },
+
+            // Logout Button at Bottom
+            Container(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  const Divider(thickness: 1),
+                  const SizedBox(height: 8),
+                  ListTile(
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.logout, color: Colors.red),
+                    ),
+                    title: const Text(
+                      'Logout',
+                      style: TextStyle(
+                        color: Colors.red,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _showLogoutConfirmation();
+                    },
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -235,21 +365,57 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
+  // Helper method for drawer items
   Widget _buildDrawerItem(
     IconData icon,
-    String title,
-    int? index, {
-    VoidCallback? onTap,
+    String title, {
+    required VoidCallback onTap,
   }) {
     return ListTile(
-      leading: Icon(icon, color: AppColors.textSecondaryDark),
-      title: Text(title),
-      onTap:
-          onTap ??
-          () {
-            Navigator.pop(context);
-            if (index != null) _onItemTapped(index);
-          },
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: AppColors.accentLight.withOpacity(0.1),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(icon, color: AppColors.accentLight),
+      ),
+      title: Text(
+        title,
+        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+      ),
+      onTap: onTap,
+    );
+  }
+
+  // Logout confirmation dialog
+  void _showLogoutConfirmation() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        title: const Icon(Icons.logout, color: Colors.red, size: 40),
+        content: Text(
+          _isGuest ? 'End guest session?' : 'Logout from your account?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _handleLogout();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Logout'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -407,10 +573,10 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     final today = DateTime.now().weekday;
-    if(mounted){
+    if (mounted) {
       setState(() {
-      _customQuote = _defaultQuotes[today] ?? _defaultQuotes[1]!;
-    });
+        _customQuote = _defaultQuotes[today] ?? _defaultQuotes[1]!;
+      });
     }
   }
 
@@ -977,181 +1143,182 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-Widget _buildMedicationCard(Medication medication, bool isToday) {
-  return Card(
-    elevation: 2,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(12),
-    ),
-    child: Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        color: isToday ? Colors.white : Colors.grey[50],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header with name and dosage
-            Row(
-              children: [
-                // Show image thumbnail for registered users if available
-                if (!_isGuest && medication.imagePath != null)
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
-                      image: DecorationImage(
-                        image: FileImage(File(medication.imagePath!)),
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  )
-                else
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: (isToday ? AppColors.accentLight : Colors.grey).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      Icons.medication,
-                      color: isToday ? AppColors.accentLight : Colors.grey,
-                      size: 20,
-                    ),
-                  ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        medication.name,
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: isToday ? Colors.black : Colors.grey[700],
+  Widget _buildMedicationCard(Medication medication, bool isToday) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          color: isToday ? Colors.white : Colors.grey[50],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header with name and dosage
+              Row(
+                children: [
+                  // Show image thumbnail for registered users if available
+                  if (!_isGuest && medication.imagePath != null)
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        image: DecorationImage(
+                          image: FileImage(File(medication.imagePath!)),
+                          fit: BoxFit.cover,
                         ),
                       ),
-                      Text(
-                        '${medication.dosage} • ${medication.numberOfTablets} tablet(s)',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: isToday ? Colors.grey[600] : Colors.grey[500],
+                    )
+                  else
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: (isToday ? AppColors.accentLight : Colors.grey)
+                            .withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        Icons.medication,
+                        color: isToday ? AppColors.accentLight : Colors.grey,
+                        size: 20,
+                      ),
+                    ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          medication.name,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: isToday ? Colors.black : Colors.grey[700],
+                          ),
+                        ),
+                        Text(
+                          '${medication.dosage} • ${medication.numberOfTablets} tablet(s)',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: isToday
+                                ? Colors.grey[600]
+                                : Colors.grey[500],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Only show toggle button for today
+                  if (isToday)
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                      child: IconButton(
+                        icon: const Icon(
+                          Icons.radio_button_unchecked,
+                          color: Colors.grey,
+                          size: 24,
+                        ),
+                        onPressed: () => _toggleMedicationTaken(medication),
+                        tooltip: 'Mark as taken',
+                      ),
+                    )
+                  else
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[200],
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        'Upcoming',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      ),
+                    ),
+                ],
+              ),
+
+              // Notes if available
+              if (medication.notes != null && medication.notes!.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.note_outlined,
+                        size: 14,
+                        color: Colors.grey[600],
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          medication.notes!,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[800],
+                          ),
                         ),
                       ),
                     ],
                   ),
                 ),
-                // Only show toggle button for today
-                if (isToday)
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.green.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                    child: IconButton(
-                      icon: const Icon(
-                        Icons.radio_button_unchecked,
-                        color: Colors.grey,
-                        size: 24,
-                      ),
-                      onPressed: () => _toggleMedicationTaken(medication),
-                      tooltip: 'Mark as taken',
-                    ),
-                  )
-                else
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      'Upcoming',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ),
               ],
-            ),
 
-            // Notes if available
-            if (medication.notes != null && medication.notes!.isNotEmpty) ...[
-              const SizedBox(height: 10),
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.grey[100],
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Row(
+              // Edit and Delete buttons (only for today's medications)
+              if (isToday) ...[
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    Icon(
-                      Icons.note_outlined,
-                      size: 14,
-                      color: Colors.grey[600],
+                    TextButton.icon(
+                      onPressed: () => _editMedication(medication),
+                      icon: Icon(
+                        Icons.edit_outlined,
+                        size: 16,
+                        color: AppColors.accentLight,
+                      ),
+                      label: const Text('Edit'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.accentLight,
+                      ),
                     ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        medication.notes!,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[800],
-                        ),
+                    const SizedBox(width: 4),
+                    TextButton.icon(
+                      onPressed: () => _deleteMedication(medication),
+                      icon: Icon(
+                        Icons.delete_outline,
+                        size: 16,
+                        color: Colors.red[400],
+                      ),
+                      label: Text(
+                        'Delete',
+                        style: TextStyle(color: Colors.red[400]),
+                      ),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.red[400],
                       ),
                     ),
                   ],
                 ),
-              ),
+              ],
             ],
-
-            // Edit and Delete buttons (only for today's medications)
-            if (isToday) ...[
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton.icon(
-                    onPressed: () => _editMedication(medication),
-                    icon: Icon(
-                      Icons.edit_outlined,
-                      size: 16,
-                      color: AppColors.accentLight,
-                    ),
-                    label: const Text('Edit'),
-                    style: TextButton.styleFrom(
-                      foregroundColor: AppColors.accentLight,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  TextButton.icon(
-                    onPressed: () => _deleteMedication(medication),
-                    icon: Icon(
-                      Icons.delete_outline,
-                      size: 16,
-                      color: Colors.red[400],
-                    ),
-                    label: Text(
-                      'Delete',
-                      style: TextStyle(color: Colors.red[400]),
-                    ),
-                    style: TextButton.styleFrom(
-                      foregroundColor: Colors.red[400],
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ],
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 }

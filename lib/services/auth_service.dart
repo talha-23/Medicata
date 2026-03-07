@@ -367,4 +367,28 @@ class AuthService {
   bool isEmailVerified() {
     return _auth.currentUser?.emailVerified ?? false;
   }
+
+  Future<void> updateUserProfile(
+    String uid,
+    Map<String, dynamic> profileData,
+  ) async {
+    try {
+      await _firestore.collection('users').doc(uid).update(profileData);
+    } catch (e) {
+      print('Error updating user profile: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> updateUserProfileImage(String uid, String imagePath) async {
+    try {
+      await _firestore.collection('users').doc(uid).update({
+        'profileImage': imagePath,
+        'profileImageUpdatedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      print('Error updating profile image: $e');
+      rethrow;
+    }
+  }
 }

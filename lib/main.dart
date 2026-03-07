@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'Screens/Signup.dart';
 import 'Screens/Home.dart';
 import 'Colors/theme.dart';
@@ -11,9 +12,15 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await FirebaseConfig.initialize();
 
-   // Initialize notification service
   final notificationService = NotificationService();
   await notificationService.initialize();
+
+   try {
+    await dotenv.load(fileName: ".env");
+    print('Environment variables loaded successfully');
+  } catch (e) {
+    print('Error loading .env file: $e');
+  }
 
   runApp(const MyApp());
 }
