@@ -219,9 +219,7 @@ MIT License - see [LICENSE](LICENSE) file
 
 ## 📞 Contact
 
-- **Email**: support@medicata.com
-- **Website**: www.medicata.com
-- **Issues**: GitHub Issues
+- **Email**: muhammadtalha8150.com
 
 ---
 
