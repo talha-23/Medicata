@@ -55,5 +55,4 @@ deriveddata/
 app.*.symbols
 app.*.map.json
 
-# do not upload environment file
 .env
