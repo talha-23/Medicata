@@ -1,25 +1,25 @@
 // utils/feature_flags.dart
 class FeatureFlags {
   static const Map<String, bool> _guestFeatures = {
-    'history': true, // Basic history view
-    'add_medication': true, // ✅ Can add medications (local only)
-    'ai_chatbot': false, // No AI chatbot
-    'profile_stats': true, // Limited profile stats
-    'notifications': false, // No notifications
-    'export_data': false, // Cannot export data
-    'sync': false, // No cloud sync
-    'reminders': true, // Basic reminders (local only)
+    'history': true,
+    'add_medication': true,
+    'ai_chatbot': false, // Still false for guests
+    'profile_stats': true,
+    'notifications': false,
+    'export_data': false,
+    'sync': false,
+    'reminders': true,
   };
 
   static const Map<String, bool> _registeredFeatures = {
-    'history': true, // Full history with analytics
-    'add_medication': true, // Can add medications (cloud sync)
-    'ai_chatbot': true, // Full AI chatbot access
-    'profile_stats': true, // Complete profile stats
-    'notifications': true, // Push notifications
-    'export_data': true, // Can export data
-    'sync': true, // Cloud sync across devices
-    'reminders': true, // Advanced reminders with custom schedules
+    'history': true,
+    'add_medication': true,
+    'ai_chatbot': true, 
+    'profile_stats': true,
+    'notifications': true,
+    'export_data': true,
+    'sync': true,
+    'reminders': true,
   };
 
   static bool canUseFeature(String featureName, bool isGuest) {
