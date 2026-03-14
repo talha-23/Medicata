@@ -201,6 +201,11 @@ GROQ_API_KEY=gsk_your_key_here
 5. Open Pull Request
 
 ---
+## 📹 Demo Video
+
+[Watch the demo](https://drive.google.com/file/d/1gKb1LK3oxqkNOrTkT6k2XTJ8xuaGBFLt/view?usp=drive_link)
+
+---
 
 ## 📄 License
 
